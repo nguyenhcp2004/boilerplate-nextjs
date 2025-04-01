@@ -1,6 +1,5 @@
 import { UseFormSetError } from 'react-hook-form'
 import { toast } from 'sonner'
-import { jwtDecode } from 'jwt-decode'
 import { EntityError } from '@/lib/http'
 
 export const handleErrorApi = ({
@@ -25,8 +24,4 @@ export const handleErrorApi = ({
       duration: duration ?? 5000
     })
   }
-}
-
-export const decodeToken = (token: string) => {
-  return jwtDecode(token)
 }

@@ -1,4 +1,5 @@
 import { clsx, type ClassValue } from 'clsx'
+import { jwtDecode } from 'jwt-decode'
 import { twMerge } from 'tailwind-merge'
 
 export function cn(...inputs: ClassValue[]) {
@@ -10,4 +11,8 @@ export function cn(...inputs: ClassValue[]) {
  */
 export const normalizePath = (path: string) => {
   return path.startsWith('/') ? path.slice(1) : path
+}
+
+export const decodeToken = (token: string) => {
+  return jwtDecode(token)
 }
