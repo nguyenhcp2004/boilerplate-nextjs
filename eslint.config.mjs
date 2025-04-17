@@ -16,7 +16,12 @@ const eslintConfig = [
       semi: ['off'],
       'jsx-quotes': ['error', 'prefer-single'],
       'arrow-parens': ['error', 'always'],
-      'no-trailing-spaces': 'error'
+      'no-trailing-spaces': 'error',
+      '@typescript-eslint/interface-name-prefix': 'off',
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/explicit-module-boundary-types': 'off',
+      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-unused-vars': 'warn'
     }
   })
 ]
