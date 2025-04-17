@@ -1,4 +1,4 @@
-import { Env } from '@/lib/env'
+import { env } from '@/lib/env'
 
 type CustomOptions = Omit<RequestInit, 'method'> & {
   baseUrl?: string | undefined
@@ -66,7 +66,7 @@ const request = async <Response>(
   // Nếu không truyền baseUrl (hoặc baseUrl = undefined) thì lấy từ envClientConfig.NEXT_PUBLIC_API_ENDPOINT
   // Nếu truyền baseUrl thì lấy giá trị truyền vào, truyền vào '' thì đồng nghĩa với việc chúng ta gọi API đến Next.js Server
 
-  const baseUrl = options?.baseUrl === undefined ? Env.NEXT_PUBLIC_API_ENDPOINT : options.baseUrl
+  const baseUrl = options?.baseUrl === undefined ? env.NEXT_PUBLIC_API_ENDPOINT : options.baseUrl
 
   const fullUrl = url.startsWith('/') ? `${baseUrl}${url}` : `${baseUrl}/${url}`
 
