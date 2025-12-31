@@ -5,7 +5,10 @@
       "Bash(cat:*)",
       "Bash(ls:*)",
       "Bash(tree:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(npm run test:*)",
+      "Bash(npm run lint:*)",
+      "Bash(mkdir:*)"
     ]
   },
   "enabledPlugins": {

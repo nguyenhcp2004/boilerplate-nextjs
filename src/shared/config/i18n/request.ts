@@ -13,7 +13,8 @@ export default getRequestConfig(async ({ requestLocale }) => {
       // Shared segments
       ...(await import(`@/shared/segments/common/${locale}.json`)).default,
       // Feature segments
-      ...(await import(`@/features/home/i18n/${locale}.json`)).default
+      ...(await import(`@/features/home/i18n/${locale}.json`)).default,
+      ...(await import(`@/features/auth/i18n/${locale}.json`)).default
     }
   }
 })
