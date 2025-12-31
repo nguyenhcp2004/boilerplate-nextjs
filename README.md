@@ -102,11 +102,14 @@ boilerplate-nextjs/
 ```
 
 **Key Rules:**
+
 1. **Dependency Rule**: Only import from layers below you
+
    - ✅ `features` can import from `entities` and `shared`
    - ❌ `features` cannot import from `screens` or `widgets`
 
 2. **Public API**: Each slice exports through `index.ts`
+
    - ✅ Use: `import { HomeHero } from '@/features/home'`
    - ❌ Avoid: `import { HomeHero } from '@/features/home/ui/home-hero'`
 
@@ -120,18 +123,19 @@ TypeScript path aliases configured in `tsconfig.json`:
 
 ```json
 {
-  "@/app/*": "./src/app/*",           // FSD app layer
-  "@/shared/*": "./src/shared/*",     // Shared utilities, UI, configs
+  "@/app/*": "./src/app/*", // FSD app layer
+  "@/shared/*": "./src/shared/*", // Shared utilities, UI, configs
   "@/entities/*": "./src/entities/*", // Business domain objects
   "@/features/*": "./src/features/*", // User-interaction features
-  "@/widgets/*": "./src/widgets/*",   // Compound components
-  "@/screens/*": "./src/screens/*"    // Application pages
+  "@/widgets/*": "./src/widgets/*", // Compound components
+  "@/screens/*": "./src/screens/*" // Application pages
 }
 ```
 
 ## 🌍 Internationalization (i18n)
 
 ### Supported Locales
+
 - **Vietnamese (vi)** - Default locale
 - **English (en)**
 
@@ -151,6 +155,7 @@ src/
 ### Adding New Translations
 
 1. **For a new feature**:
+
    ```bash
    src/features/my-feature/i18n/
    ├── vi.json
@@ -178,11 +183,13 @@ npx shadcn@latest add [component-name]
 Components will be installed to `src/shared/ui/[component]/` following the FSD architecture.
 
 **Example:**
+
 ```bash
 npx shadcn@latest add dialog
 ```
 
 This will create:
+
 ```
 src/shared/ui/dialog/
 ├── dialog.tsx
@@ -192,6 +199,7 @@ src/shared/ui/dialog/
 ## 🚦 Getting Started
 
 ### Prerequisites
+
 - Node.js 18+ installed
 - npm, yarn, pnpm, or bun
 
@@ -315,6 +323,432 @@ export default function Cart() {
 }
 ```
 
+## 💡 Code Examples
+
+Complete examples to help you get started with the FSD architecture.
+
+### Example 1: User Entity (Data Layer)
+
+```typescript
+// ========== entities/user/api/index.ts ==========
+import http from '@/shared/lib/http'
+
+export const userApi = {
+  getCurrent: () => http.get('/user/profile'),
+  login: (credentials) => http.post('/auth/login', credentials),
+  update: (data) => http.put('/user/profile', data),
+} as const
+
+// ========== entities/user/api/keys.ts ==========
+export const userKeys = {
+  all: ['users'] as const,
+  current: () => [...userKeys.all, 'current'] as const,
+  profile: () => [...userKeys.current(), 'profile'] as const,
+} as const
+
+// ========== entities/user/model/types.ts ==========
+export interface User {
+  id: string
+  email: string
+  name?: string
+}
+
+// ========== entities/user/model/store.ts ==========
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
+
+export const useAuthStore = create<AuthStore>()(
+  persist(
+    (set) => ({
+      user: null,
+      isAuthenticated: false,
+      setUser: (user) => set({ user, isAuthenticated: true }),
+    }),
+    { name: 'auth-storage' }
+  )
+)
+
+// ========== entities/user/api/user.queries.ts ==========
+import { queryOptions } from '@tanstack/react-query'
+import { userApi } from './index'
+
+/**
+ * User Query Factory
+ * TanStack Query v5 queryOptions for type-safe queries
+ */
+export const userQueries = {
+  all: () => ['users'] as const,
+
+  current: () => queryOptions({
+    queryKey: [...userQueries.all(), 'current'],
+    queryFn: () => userApi.getCurrent(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  }),
+
+  detail: (id: string) => queryOptions({
+    queryKey: [...userQueries.all(), 'detail', id],
+    queryFn: () => userApi.getById(id),
+    enabled: !!id,
+  }),
+}
+```
+
+### Example 2: Auth Feature - Usage Layer
+
+**Important:** TanStack Query hooks belong in the `features` layer, not `entities`. The entities layer provides the data source (API + queryOptions), while features layer provides the usage logic (hooks).
+
+```typescript
+// ========== features/auth/api/use-current-user.ts ==========
+import { useQuery } from '@tanstack/react-query'
+import { useEffect } from 'react'
+import { userQueries } from '@/entities/user/api'
+import { useAuthStore } from '@/entities/user/model/store'
+
+/**
+ * useCurrentUser Hook
+ * Fetches current user using queryOptions from entities
+ */
+export function useCurrentUser() {
+  const setUser = useAuthStore((state) => state.setUser)
+
+  const query = useQuery(userQueries.current())
+
+  // Update store when data changes
+  useEffect(() => {
+    if (query.data) {
+      setUser(query.data.payload)
+    }
+  }, [query.data, setUser])
+
+  return query
+}
+```
+
+### Example 3: Auth Feature (Business Logic)
+
+```typescript
+// ========== features/auth/model/use-auth.ts ==========
+import { useAuthStore } from '@/entities/user'
+
+export function useAuth() {
+  const { user, isAuthenticated } = useAuthStore()
+
+  const logout = () => {
+    // Add auth-specific logic
+    localStorage.removeItem('token')
+    // Clear store
+  }
+
+  return { user, isAuthenticated, logout }
+}
+
+// ========== features/auth/model/use-login.ts ==========
+import { useMutation } from '@tanstack/react-query'
+import { userApi } from '@/entities/user/api'
+
+export function useLogin() {
+  return useMutation({
+    mutationFn: userApi.login,
+    onSuccess: (response) => {
+      const { token, user } = response.payload
+      localStorage.setItem('token', token)
+      // Redirect, etc.
+    },
+  })
+}
+```
+
+### Example 4: Using in Components
+
+```typescript
+// ========== features/auth/ui/login-form.tsx ==========
+'use client'
+
+import { useLogin } from '@/features/auth'
+
+export function LoginForm() {
+  const { mutate: login, isPending } = useLogin()
+
+  return (
+    <form onSubmit={(data) => login(data)}>
+      <input name="email" />
+      <input name="password" type="password" />
+      <button disabled={isPending}>Login</button>
+    </form>
+  )
+}
+
+// ========== features/auth/ui/logout-button.tsx ==========
+'use client'
+
+import { useAuth } from '@/features/auth'
+
+export function LogoutButton() {
+  const { logout, user } = useAuth()
+
+  return (
+    <button onClick={logout}>
+      Logout, {user?.name}
+    </button>
+  )
+}
+```
+
+For more detailed examples, check the actual code:
+- `entities/user/` - User entity with API, queryOptions, store, and types
+- `features/auth/` - Auth feature with hooks, forms, and business logic
+
+## 📊 TanStack Query + FSD Architecture
+
+This project follows the official [Feature-Sliced Design React Query guide](https://feature-sliced.design/docs/guides/tech/with-react-query) for data fetching.
+
+### Layer Responsibilities
+
+**Entities Layer** (`src/entities/user/`)
+- ✅ API methods (HTTP calls)
+- ✅ Query factory with `queryOptions` (TanStack Query v5)
+- ✅ Domain types
+- ✅ Zustand stores
+- ❌ NOT: React Query hooks (belongs in features)
+
+**Features Layer** (`src/features/auth/`)
+- ✅ React Query hooks (`useQuery`, `useMutation`)
+- ✅ Business logic
+- ✅ UI components
+- ❌ NOT: API methods or queryOptions (belongs in entities)
+
+### Key Benefits of queryOptions Pattern
+
+```typescript
+// ✅ Type-safe - autocomplete for query keys and parameters
+const { data } = useQuery(userQueries.current())
+const { data } = useQuery(userQueries.detail(userId))
+
+// ✅ Centralized configuration
+// All query options (staleTime, retry, etc.) defined in one place
+
+// ✅ Easy refetching
+queryClient.invalidateQueries({ queryKey: userQueries.current().queryKey })
+```
+
+### File Structure
+
+```
+src/
+├── entities/user/
+│   ├── api/
+│   │   ├── index.ts           # API methods
+│   │   ├── keys.ts            # Query keys (legacy)
+│   │   └── user.queries.ts    # queryOptions factory ⭐
+│   └── model/
+│       ├── types.ts           # Domain types
+│       └── store.ts           # Zustand store
+│
+└── features/auth/
+    ├── api/
+    │   ├── use-current-user.ts    # Query hooks ⭐
+    │   └── use-update-user.ts     # Mutation hooks ⭐
+    ├── model/
+    │   └── use-auth.ts           # Business logic
+    └── ui/
+        ├── login-form.tsx
+        └── logout-button.tsx
+```
+
+This architecture ensures:
+- **Separation of Concerns**: Data source (entities) vs usage (features)
+- **Type Safety**: queryOptions provide full TypeScript autocomplete
+- **Maintainability**: Easy to modify and extend queries
+- **Reusability**: queryOptions can be used across multiple features
+
+## 🔄 Mutations vs Queries: Important Differences
+
+### Key Concept: Mutations Don't Use `mutationOptions`
+
+Unlike queries, **mutations do NOT have a `mutationOptions` pattern** in TanStack Query. This is intentional:
+
+| Aspect | Queries (Read) | Mutations (Write) |
+|--------|---------------|-------------------|
+| **Pattern** | `queryOptions` in entities | `useMutation` in features |
+| **Entities Layer** | API functions + `queryOptions()` | API functions only |
+| **Features Layer** | Optional custom hooks | Required `useMutation` hooks |
+| **Configuration** | Declarative (staleTime, retry) | Imperative (onSuccess, onError) |
+| **Invalidation** | Automatic refetching | Manual invalidation |
+| **Trigger** | Automatic on mount | Manual (`mutate()` call) |
+
+### Mutation Pattern
+
+**Entities Layer** (`src/entities/user/api/index.ts`) - API Functions Only
+```typescript
+export const userApi = {
+  // Mutation functions (pure HTTP calls)
+  login: (credentials: LoginCredentials) =>
+    http.post<LoginResponse>('/auth/login', credentials),
+
+  update: (data: UpdateUserData) =>
+    http.put<User>('/user/profile', data),
+
+  delete: (id: string) =>
+    http.delete(`/users/${id}`),
+}
+```
+
+**Features Layer** (`src/features/auth/api/`) - useMutation Hooks
+```typescript
+export function useUpdateProfile() {
+  const queryClient = useQueryClient()
+  const updateUser = useAuthStore(s => s.updateUser)
+
+  return useMutation({
+    mutationFn: userApi.update,              // API call from entities
+    onSuccess: (response) => {
+      // Side effects
+      updateUser(response.payload)            // Update Zustand store
+      queryClient.invalidateQueries({         // Refetch queries
+        queryKey: userQueries.current().queryKey
+      })
+    },
+  })
+}
+```
+
+### Query Invalidation Strategy
+
+Mutations should invalidate related queries after success:
+
+```typescript
+// ✅ Good: Invalidate specific queries
+queryClient.invalidateQueries({
+  queryKey: userQueries.current().queryKey
+})
+
+// ✅ Good: Invalidate all user queries
+queryClient.invalidateQueries({
+  queryKey: userKeys.all()
+})
+
+// ❌ Avoid: Too broad (may cause unnecessary refetches)
+queryClient.invalidateQueries()
+```
+
+### Complete Example: CRUD Pattern
+
+```typescript
+// ========== ENTITIES: API functions ==========
+// entities/user/api/index.ts
+export const userApi = {
+  // Queries
+  getCurrent: () => http.get<User>('/user/profile'),
+  list: () => http.get<User[]>('/users'),
+
+  // Mutations
+  create: (data: CreateUserData) => http.post<User>('/users', data),
+  update: (id: string, data: UpdateUserData) => http.put<User>(`/users/${id}`, data),
+  delete: (id: string) => http.delete(`/users/${id}`),
+}
+
+// ========== FEATURES: Mutation hooks ==========
+// features/user-management/api/use-user-mutations.ts
+
+export function useCreateUser() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: userApi.create,
+    onSuccess: () => {
+      // Invalidate list query to show new user
+      queryClient.invalidateQueries({
+        queryKey: userQueries.lists().queryKey
+      })
+      toast.success('User created!')
+    },
+  })
+}
+
+export function useUpdateUser() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, data }) => userApi.update(id, data),
+    onSuccess: (updatedUser) => {
+      // Update specific user in cache (optimistic)
+      queryClient.setQueryData(
+        userQueries.detail(updatedUser.payload.id).queryKey,
+        updatedUser
+      )
+      // Invalidate list as well
+      queryClient.invalidateQueries({
+        queryKey: userQueries.lists().queryKey
+      })
+    },
+  })
+}
+
+export function useDeleteUser() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: userApi.delete,
+    onSuccess: (_, deletedId) => {
+      // Remove from cache
+      queryClient.removeQueries({
+        queryKey: userQueries.detail(deletedId).queryKey
+      })
+      // Invalidate list
+      queryClient.invalidateQueries({
+        queryKey: userQueries.lists().queryKey
+      })
+      toast.success('User deleted!')
+    },
+  })
+}
+```
+
+### Usage in Components
+
+```typescript
+function UserProfile() {
+  // Query hook
+  const { data: user, isLoading } = useQuery(userQueries.current())
+
+  // Mutation hooks
+  const { mutate: updateProfile, isPending } = useUpdateProfile()
+  const { mutate: deleteAccount } = useDeleteUser()
+
+  const handleUpdate = (newData: UpdateUserData) => {
+    updateProfile(newData)  // Trigger mutation
+  }
+
+  const handleDelete = () => {
+    deleteAccount(userId)  // Trigger mutation
+  }
+
+  return (
+    <div>
+      <h1>{user?.name}</h1>
+      <button onClick={() => handleUpdate({ name: 'New Name' })}>
+        Update Profile
+      </button>
+      <button onClick={handleDelete}>Delete Account</button>
+    </div>
+  )
+}
+```
+
+### Summary
+
+✅ **DO:**
+- Keep mutation API functions in entities
+- Create `useMutation` hooks in features
+- Invalidate queries using `queryKeys` from entities
+- Handle side effects in `onSuccess`/`onError`
+
+❌ **DON'T:**
+- Create a `mutationOptions` pattern (doesn't exist)
+- Put mutation hooks in entities
+- Forget to invalidate related queries
+- Mix queries and mutations in the same hook
+
 ## 🔧 Environment Variables
 
 Create a `.env.local` file in the root directory:
@@ -338,6 +772,7 @@ The project includes a typed HTTP client (`@/shared/lib/http`) with:
 - Configurable base URL
 
 **Usage:**
+
 ```typescript
 import http from '@/shared/lib/http'
 
@@ -349,7 +784,7 @@ const result = await http.post<LoginResponse>('/auth/login', { email, password }
 
 // With custom options
 const data = await http.get<Data>('/endpoint', {
-  baseUrl: ''  // Empty string for relative API calls to Next.js
+  baseUrl: '' // Empty string for relative API calls to Next.js
 })
 ```
 
@@ -372,6 +807,7 @@ Follow the conventional commits format:
 ```
 
 **Allowed types:**
+
 - `feat` - New feature
 - `fix` - Bug fix
 - `improve` - Improvement
@@ -385,6 +821,7 @@ Follow the conventional commits format:
 - `build` - Build system changes
 
 **Examples:**
+
 ```bash
 feat(auth): add login form
 fix(api): handle token expiration
