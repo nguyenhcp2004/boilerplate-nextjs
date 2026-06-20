@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 RED='\033[0;31m'
 NC='\033[0m'
 
@@ -7,7 +7,15 @@ branch_name=$(git rev-parse --abbrev-ref HEAD)
 # List of protected branches
 PROTECTED_BRANCHES=("develop" "main")
 
-if [[ " ${PROTECTED_BRANCHES[@]} " =~ " ${branch_name} " ]]; then
+is_protected=0
+for protected in "${PROTECTED_BRANCHES[@]}"; do
+  if [[ "$branch_name" == "$protected" ]]; then
+    is_protected=1
+    break
+  fi
+done
+
+if [[ $is_protected -eq 1 ]]; then
   echo -e "${RED}Pushing to '${branch_name}' is not allowed! Please create a merge request.${NC}"
   exit 1
 fi
