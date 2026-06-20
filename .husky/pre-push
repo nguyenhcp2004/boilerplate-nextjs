@@ -4,12 +4,15 @@ NC='\033[0m'
 
 branch_name=$(git rev-parse --abbrev-ref HEAD)
 
-# List of protected branches
-PROTECTED_BRANCHES=("develop" "main")
+# Dùng chuỗi phân tách bằng khoảng trắng thay vì mảng
+PROTECTED_BRANCHES=" develop main "
 
-if [[ " ${PROTECTED_BRANCHES[@]} " =~ " ${branch_name} " ]]; then
+# Kiểm tra xem chuỗi PROTECTED_BRANCHES có chứa " branch_name " hay không
+case "$PROTECTED_BRANCHES" in
+*" $branch_name "*)
   echo -e "${RED}Pushing to '${branch_name}' is not allowed! Please create a merge request.${NC}"
   exit 1
-fi
+  ;;
+esac
 
 echo "Push is allowed, continuing..."
