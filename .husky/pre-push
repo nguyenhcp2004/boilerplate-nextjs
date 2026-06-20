@@ -1,23 +1,18 @@
-#!/bin/bash
+#!/bin/sh
 RED='\033[0;31m'
 NC='\033[0m'
 
 branch_name=$(git rev-parse --abbrev-ref HEAD)
 
-# List of protected branches
-PROTECTED_BRANCHES=("develop" "main")
+# Dùng chuỗi phân tách bằng khoảng trắng thay vì mảng
+PROTECTED_BRANCHES=" develop main "
 
-is_protected=0
-for protected in "${PROTECTED_BRANCHES[@]}"; do
-  if [[ "$branch_name" == "$protected" ]]; then
-    is_protected=1
-    break
-  fi
-done
-
-if [[ $is_protected -eq 1 ]]; then
+# Kiểm tra xem chuỗi PROTECTED_BRANCHES có chứa " branch_name " hay không
+case "$PROTECTED_BRANCHES" in
+*" $branch_name "*)
   echo -e "${RED}Pushing to '${branch_name}' is not allowed! Please create a merge request.${NC}"
   exit 1
-fi
+  ;;
+esac
 
 echo "Push is allowed, continuing..."
