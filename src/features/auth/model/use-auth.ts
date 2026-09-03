@@ -1,6 +1,9 @@
-import { useAuthStore } from '@/entities/user'
-import { useRouter } from 'next/navigation'
+'use client'
+
 import { useCallback } from 'react'
+import { useAuthStore } from '@/entities/user'
+import { useRouter } from '@/shared/config/i18n/navigation'
+import { ROUTES } from '@/shared/config/routes'
 
 /**
  * useAuth Hook
@@ -16,8 +19,8 @@ export function useAuth() {
    */
   const logout = useCallback(() => {
     clearSession()
-    localStorage.removeItem('token')
-    router.push('/login')
+    localStorage.removeItem('sessionToken')
+    router.push(ROUTES.signIn)
   }, [clearSession, router])
 
   /**
@@ -26,7 +29,7 @@ export function useAuth() {
    */
   const requireAuth = useCallback(() => {
     if (!isAuthenticated) {
-      router.push('/login')
+      router.push(ROUTES.signIn)
     }
   }, [isAuthenticated, router])
 
