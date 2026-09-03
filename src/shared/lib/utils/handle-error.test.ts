@@ -1,11 +1,13 @@
+import { toast } from 'sonner'
 import { EntityError } from '../http/http'
 import { handleErrorApi } from './handle-error'
 
 // Mock toast from sonner
-const toastMock = { error: jest.fn() }
 jest.mock('sonner', () => ({
-  toast: toastMock,
+  toast: { error: jest.fn() },
 }))
+
+const toastMock = jest.mocked(toast)
 
 describe('handleErrorApi', () => {
   const mockSetError = jest.fn()
