@@ -1,40 +1,30 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { useEffect } from 'react'
-import { userQueries } from '@/entities/user/api'
-import { useAuthStore } from '@/entities/user/model/store'
+import { authClient } from '@/entities/user/api/auth-client'
+import { userApi } from '@/entities/user/api'
 
 /**
  * useCurrentUser Hook
- * Fetches current authenticated user using TanStack Query
- * Automatically updates Zustand store when data changes
- *
- * @example
- * const { data, isLoading, error } = useCurrentUser()
+ * Session comes from Better Auth's reactive useSession (cookie-based);
+ * no react-query needed — reactive via nanostores.
  */
 export function useCurrentUser() {
-  const setUser = useAuthStore((state) => state.setUser)
-
-  const query = useQuery(userQueries.current())
-
-  // Update store when data changes
-  useEffect(() => {
-    if (query.data) {
-      setUser(query.data.payload)
-    }
-  }, [query.data, setUser])
-
-  return query
+  return authClient.useSession()
 }
 
 /**
  * useUserById Hook
- * Fetches a specific user by ID
+ * Fetches a specific user by ID from the application route
  *
  * @example
  * const { data, isLoading, error } = useUserById('user-123')
  */
 export function useUserById(id: string) {
-  return useQuery(userQueries.detail(id))
+  return useQuery({
+    queryKey: ['users', 'detail', id] as const,
+    queryFn: () => userApi.getById(id),
+    staleTime: 5 * 60 * 1000,
+    enabled: !!id,
+  })
 }

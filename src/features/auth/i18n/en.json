@@ -11,7 +11,9 @@
     "signUp": "Sign up",
     "loginSuccess": "Login successful!",
     "loginFailed": "Login failed",
-    "invalidCredentials": "Invalid email or password"
+    "invalidCredentials": "Invalid email or password",
+    "emailNotVerified": "Email not verified. Check your inbox.",
+    "tooManyAttempts": "Too many attempts. Try again later."
   },
   "validation": {
     "emailRequired": "Email is required",
