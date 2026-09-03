@@ -12,5 +12,10 @@
     "loginSuccess": "Login successful!",
     "loginFailed": "Login failed",
     "invalidCredentials": "Invalid email or password"
+  },
+  "validation": {
+    "emailRequired": "Email is required",
+    "emailInvalid": "Invalid email address",
+    "passwordMin": "Password must be at least 6 characters"
   }
 }
