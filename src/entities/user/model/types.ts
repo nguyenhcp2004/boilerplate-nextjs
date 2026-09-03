@@ -1,37 +1,20 @@
 /**
  * User Entity Types
  * Domain models for the User entity
+ *
+ * Session identity comes from Better Auth — see api/auth-client.ts.
+ * These types cover application user records from /api/v1/users/*.
  */
 
 export interface User {
   id: string
   email: string
   name?: string
-  avatar?: string
+  username?: string
+  bio?: string
+  image?: string
   role?: 'user' | 'admin' | 'moderator'
   emailVerified?: boolean
   createdAt: string
   updatedAt: string
-}
-
-export interface LoginCredentials {
-  email: string
-  password: string
-}
-
-export interface LoginResponse {
-  token: string
-  user: User
-  expiresIn: number
-}
-
-export interface UpdateUserData {
-  name?: string
-  avatar?: string
-}
-
-export interface Session {
-  token: string
-  user: User
-  expiresAt: number
 }

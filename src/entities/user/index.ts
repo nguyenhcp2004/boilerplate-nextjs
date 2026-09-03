@@ -5,7 +5,7 @@
 
 // API layer (data source)
 export * from './api'
+export { authClient } from './api/auth-client'
 
 // Model layer (business logic)
 export * from './model/types'
-export * from './model/store'
