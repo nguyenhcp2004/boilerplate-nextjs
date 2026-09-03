@@ -1,27 +1,15 @@
 import { HttpError, EntityError } from './http'
 import http from './http'
 
-// Mock localStorage
-const localStorageMock = {
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-  removeItem: jest.fn(),
-  clear: jest.fn(),
-}
-
-Object.defineProperty(window, 'localStorage', {
-  value: localStorageMock,
-})
-
 // Mock fetch
 global.fetch = jest.fn()
 
 describe('HTTP Client', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    ;(global.fetch as any).mockClear()
-    localStorageMock.getItem.mockClear()
+    ;(global.fetch as jest.Mock).mockClear()
   })
+
 
   describe('GET request', () => {
     it('makes a successful GET request', async () => {
@@ -47,8 +35,7 @@ describe('HTTP Client', () => {
       })
     })
 
-    it('includes Authorization header when sessionToken exists', async () => {
-      localStorageMock.getItem.mockReturnValueOnce('test-token')
+    it('sends cookies with every request (credentials: include)', async () => {
       ;(global.fetch as any).mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -60,9 +47,7 @@ describe('HTTP Client', () => {
       expect(global.fetch).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
-          headers: expect.objectContaining({
-            Authorization: 'Bearer test-token',
-          }),
+          credentials: 'include',
         })
       )
     })
