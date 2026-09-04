@@ -12,5 +12,10 @@
     "loginSuccess": "Đăng nhập thành công!",
     "loginFailed": "Đăng nhập thất bại",
     "invalidCredentials": "Email hoặc mật khẩu không chính xác"
+  },
+  "validation": {
+    "emailRequired": "Email không được để trống",
+    "emailInvalid": "Email không hợp lệ",
+    "passwordMin": "Mật khẩu phải có ít nhất 6 ký tự"
   }
 }

@@ -8,55 +8,70 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run build` - Build for production
 - `npm run start` - Start production server
 - `npm run lint` - Run ESLint
+- `npm test` - Run Jest test suite
 
 ## Architecture
 
 ### Tech Stack
-- **Next.js 15** with App Router and React 19
-- **next-intl** for internationalization (i18n) with locale routing
-- **shadcn/ui** (New York style) for UI components
-- **Zustand** for state management
-- **Zod** + react-hook-form for form validation
-- **Tailwind CSS v4** for styling
-- **TypeScript** with strict mode
+- **Next.js 16** (App Router, React 19) with the **root-level `app/` directory** as the sole router
+- **Feature-Sliced Design (FSD)** layers in `src/`: `app` → `screens` → `features` → `entities` → `shared`
+- **next-intl v4** for internationalization with `[locale]` routing (`vi` default, `en`)
+- **shadcn/ui** (New York style) primitives in `src/shared/ui/`
+- **TanStack Query v5** (queryOptions pattern) + **Zustand** (persisted auth store)
+- **react-hook-form + Zod** for form validation
+- **Tailwind CSS v4** for styling; **sonner** for toasts; **next-themes** for theming
 
-### Project Structure
+### App Directory Split (critical)
 
-The app uses a locale-based routing structure where all pages are under `src/app/[locale]/`.
+Next.js prioritizes `./app` over `./src/app` when both exist. This project uses:
 
-Key directories:
-- `src/app/[locale]/` - Next.js App Router pages (locale-aware)
-- `src/i18n/` - Internationalization configuration and locale files
-- `src/lib/` - Utilities including HTTP client and environment config
-- `src/stores/` - Zustand state stores
-- `src/components/ui/` - shadcn/ui components
-- `src/constants/` - Routes and system messages
-- `src/validations/` - Form validation schemas
-- `src/templates/` - Page templates
+- **`app/` (root)** — all route files: `app/[locale]/page.tsx`, `app/[locale]/login/page.tsx`, etc. Route components stay thin: import a screen from `src/screens/<name>` and render it.
+- **`src/app/`** — non-route modules only: `providers.tsx` (QueryClientProvider, ThemeProvider, Toaster) and `styles/globals.css`. Never put `page.tsx`/`layout.tsx` here; Next.js will silently ignore them.
+
+### Feature-Sliced Design Layers
+
+- `src/screens/<name>/` - Route-level compositions (one per app route); renders features
+- `src/features/<name>/` - Business features: `ui/`, `model/` (hooks), `api/`, `i18n/`
+- `src/entities/<name>/` - Domain entities: `model/` (types, Zustand store), `api/` (HTTP + query keys)
+- `src/shared/` - Framework-agnostic kit: `ui/`, `lib/` (http, env, utils), `config/`, `constants/`, `types/`, `segments/` (shared i18n)
+- `src/widgets/` - Large composite widgets (empty, reserved)
+
+Import rule: a layer may only import from layers below it (`app → screens → widgets → features → entities → shared`). Never import upward or sideways.
 
 ### Internationalization (i18n)
 
-The app supports Vietnamese (`vi`) and English (`en`) with Vietnamese as the default locale. Locale files are organized by feature:
-- `src/i18n/locales/common/{locale}.json` - Shared translations
-- `src/i18n/locales/{FeatureName}/{locale}.json` - Feature-specific translations
+Locales: Vietnamese (`vi`, default) and English (`en`). Routing config: `src/shared/config/i18n/routing.ts`; locale-aware navigation (`Link`, `redirect`, `useRouter`): `src/shared/config/i18n/navigation.ts`.
 
-When adding new features with translations:
-1. Create locale JSON files under `src/i18n/locales/{FeatureName}/`
-2. Import and merge them in `src/i18n/request.ts`
+Locale JSON files live next to their feature (FSD):
+- `src/shared/segments/common/{locale}.json` - Shared translations
+- `src/features/<name>/i18n/{locale}.json` - Feature-specific translations
+
+Adding translations for a new feature:
+1. Create `{vi,en}.json` under `src/features/<name>/i18n/`
+2. Register the segment in `src/shared/config/i18n/request.ts` (the config `src/i18n/request.ts` re-exports)
+
+Locale-prefixed routes (e.g. `/vi/login`, `/en/login`) are handled by the next-intl proxy in `src/proxy.ts`.
 
 ### HTTP Client
 
-`src/lib/http.ts` provides a typed HTTP client with:
+`src/shared/lib/http/http.ts` provides a typed HTTP client with:
 - Automatic Bearer token injection from `localStorage.sessionToken`
 - Support for JSON and FormData bodies
-- Custom error classes (`HttpError`, `EntityError`)
-- Configurable `baseUrl` for API endpoints
+- Custom error classes (`HttpError`, `EntityError` for 422)
+- Configurable `baseUrl` per request (defaults to `env.NEXT_PUBLIC_API_ENDPOINT`)
 
-Environment variables are validated at runtime via `@t3-oss/env-nextjs` in `src/lib/env.ts`.
+Environment variables are validated at runtime via `@t3-oss/env-nextjs` in `src/shared/lib/env/env.ts`.
+
+### Auth Flow
+
+- Login: `features/auth/model/use-login.ts` → `entities/user/api` `userApi.login` → persists session (Zustand `auth-storage` + `localStorage.sessionToken`) → redirects to home
+- Session state: `entities/user/model/store.ts` (`useAuthStore`, persisted)
+- Guard hooks: `features/auth/model/use-auth.ts` (`useAuth().requireAuth`, `logout`, role helpers)
+- Route constants: `src/shared/config/routes.ts` (`ROUTES` object)
 
 ### Git Workflow
 
-The project uses Husky for git hooks and Commitlint for conventional commits.
+Husky for git hooks; Commitlint for conventional commits.
 
 **Commit format:** `<type>(<scope>): <subject>`
 
@@ -68,7 +83,7 @@ Allowed types: `feat`, `fix`, `improve`, `refactor`, `docs`, `chore`, `style`, `
 
 ### TypeScript Path Aliases
 
-The project uses explicit path aliases configured in `tsconfig.json`:
-- `@/components/*`, `@/lib/*`, `@/stores/*`, etc.
+Explicit layer aliases configured in `tsconfig.json` (also mirrored in `jest.config.ts`):
+- `@/app/*`, `@/screens/*`, `@/widgets/*`, `@/features/*`, `@/entities/*`, `@/shared/*`
 
-Note: The generic `@/*` alias is commented out - use specific aliases.
+Note: the generic `@/*` alias does not exist - always use the layer-specific alias.

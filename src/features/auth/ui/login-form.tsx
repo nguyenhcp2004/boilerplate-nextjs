@@ -1,66 +1,65 @@
 'use client'
 
-import { useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
-import { Label } from '@/shared/ui/label'
+import { Field, FieldError, FieldGroup, FieldLabel } from '@/shared/ui/field'
 import { useLogin } from '../model/use-login'
-import type { LoginCredentials } from '@/entities/user/model/types'
+import { LoginSchema, type LoginFormData } from '../model/login.schema'
 
 export function LoginForm() {
   const t = useTranslations('Auth')
+  const tValidation = useTranslations('validation')
   const { mutate: login, isPending } = useLogin()
-  const [error, setError] = useState<string>('')
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<LoginCredentials>()
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(LoginSchema),
+    defaultValues: { email: '', password: '' },
+  })
 
-  const onSubmit = (data: LoginCredentials) => {
-    setError('')
-    login(data, {
-      onError: (err: unknown) => {
-        setError((err as any)?.message || 'Login failed')
-      },
-    })
-  }
+  const onSubmit = (data: LoginFormData) => login(data)
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className='space-y-4'>
-      <div className='space-y-2'>
-        <Label htmlFor='email'>{t('email')}</Label>
-        <Input
-          id='email'
-          type='email'
-          placeholder='john@example.com'
-          {...register('email', { required: 'Email is required' })}
-        />
-        {errors.email && (
-          <p className='text-sm text-red-500'>{errors.email.message}</p>
-        )}
-      </div>
+    <form onSubmit={handleSubmit(onSubmit)} noValidate>
+      <FieldGroup>
+        <Field data-invalid={!!errors.email}>
+          <FieldLabel htmlFor='email'>{t('email')}</FieldLabel>
+          <Input
+            id='email'
+            type='email'
+            placeholder='john@example.com'
+            autoComplete='email'
+            aria-invalid={!!errors.email}
+            {...register('email')}
+          />
+          {errors.email && (
+            <FieldError errors={[{ message: tValidation(errors.email.message!)}]} />
+          )}
+        </Field>
+        <Field data-invalid={!!errors.password}>
+          <FieldLabel htmlFor='password'>{t('password')}</FieldLabel>
+          <Input
+            id='password'
+            type='password'
+            autoComplete='current-password'
+            aria-invalid={!!errors.password}
+            {...register('password')}
+          />
+          {errors.password && (
+            <FieldError errors={[{ message: tValidation(errors.password.message!)}]} />
+          )}
+        </Field>
 
-      <div className='space-y-2'>
-        <Label htmlFor='password'>{t('password')}</Label>
-        <Input
-          id='password'
-          type='password'
-          {...register('password', { required: 'Password is required' })}
-        />
-        {errors.password && (
-          <p className='text-sm text-red-500'>{errors.password.message}</p>
-        )}
-      </div>
-
-      {error && <p className='text-sm text-red-500'>{error}</p>}
-
-      <Button type='submit' className='w-full' disabled={isPending}>
-        {isPending ? 'Logging in...' : t('login')}
-      </Button>
+        <Button type='submit' className='w-full' disabled={isPending}>
+          {isPending ? t('login') + '...' : t('login')}
+        </Button>
+      </FieldGroup>
     </form>
   )
 }
