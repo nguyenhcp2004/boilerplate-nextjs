@@ -13,7 +13,11 @@
     "loginFailed": "Login failed",
     "invalidCredentials": "Invalid email or password",
     "emailNotVerified": "Email not verified. Check your inbox.",
-    "tooManyAttempts": "Too many attempts. Try again later."
+    "tooManyAttempts": "Too many attempts. Try again later.",
+    "socialLoginFailed": "Social login failed. Please try again.",
+    "loginTitle": "Login to your account",
+    "loginDescription": "Enter your email below to login to your account",
+    "loginWithGoogle": "Login with Google"
   },
   "validation": {
     "emailRequired": "Email is required",
