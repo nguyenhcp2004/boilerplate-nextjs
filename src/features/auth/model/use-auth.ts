@@ -1,56 +1,38 @@
 'use client'
 
 import { useCallback } from 'react'
-import { useAuthStore } from '@/entities/user'
+import { authClient } from '@/entities/user/api/auth-client'
 import { useRouter } from '@/shared/config/i18n/navigation'
 import { ROUTES } from '@/shared/config/routes'
 
 /**
  * useAuth Hook
- * Authentication business logic layer
- * Wraps entity store and adds auth-specific functionality
+ * Session state comes from Better Auth's reactive useSession (nanostores);
+ * the session is an HttpOnly cookie owned by the NestJS backend.
  */
 export function useAuth() {
   const router = useRouter()
-  const { user, isAuthenticated, clearSession } = useAuthStore()
+  const { data: session, isPending } = authClient.useSession()
+  const user = session?.user
+  const isAuthenticated = !!user
 
-  /**
-   * Logout user and redirect to login
-   */
-  const logout = useCallback(() => {
-    clearSession()
-    localStorage.removeItem('sessionToken')
+  const logout = useCallback(async () => {
+    await authClient.signOut()
     router.push(ROUTES.signIn)
-  }, [clearSession, router])
+  }, [router])
 
-  /**
-   * Require authentication
-   * Redirects to login if not authenticated
-   */
   const requireAuth = useCallback(() => {
-    if (!isAuthenticated) {
+    if (!isPending && !isAuthenticated) {
       router.push(ROUTES.signIn)
     }
-  }, [isAuthenticated, router])
-
-  /**
-   * Check if user has specific role
-   */
-  const hasRole = (role: string) => {
-    return user?.role === role
-  }
-
-  /**
-   * Check if user is admin
-   */
-  const isAdmin = () => hasRole('admin')
+  }, [isPending, isAuthenticated, router])
 
   return {
     user,
+    session,
     isAuthenticated,
+    isPending,
     logout,
     requireAuth,
-    hasRole,
-    isAdmin,
   }
 }

@@ -11,7 +11,13 @@
     "signUp": "Đăng ký",
     "loginSuccess": "Đăng nhập thành công!",
     "loginFailed": "Đăng nhập thất bại",
-    "invalidCredentials": "Email hoặc mật khẩu không chính xác"
+    "invalidCredentials": "Email hoặc mật khẩu không chính xác",
+    "emailNotVerified": "Email chưa được xác thực. Kiểm tra hộp thư của bạn.",
+    "tooManyAttempts": "Thử quá nhiều lần. Vui lòng thử lại sau.",
+    "socialLoginFailed": "Đăng nhập bằng mạng xã hội thất bại. Vui lòng thử lại.",
+    "loginTitle": "Đăng nhập tài khoản",
+    "loginDescription": "Nhập email của bạn bên dưới để đăng nhập",
+    "loginWithGoogle": "Đăng nhập bằng Google"
   },
   "validation": {
     "emailRequired": "Email không được để trống",

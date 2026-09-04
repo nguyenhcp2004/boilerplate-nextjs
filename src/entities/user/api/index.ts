@@ -1,67 +1,19 @@
 import http from '@/shared/lib/http'
-import type { User, LoginCredentials, LoginResponse, UpdateUserData } from '../model/types'
+import type { User } from '../model/types'
 
 /**
- * User API - All user-related HTTP methods
- * This is the data source layer - pure functions that make HTTP requests
+ * User API - Application user routes on the NestJS backend (cookie-authed).
+ * Auth flows (sign-in/up/out, password, email) live in the Better Auth
+ * client: ./auth-client.ts. This module only covers /api/v1/users/*.
  */
 export const userApi = {
   /**
-   * Get current authenticated user
-   */
-  getCurrent: () => http.get<User>('/user/profile'),
-
-  /**
    * Get user by ID
    */
-  getById: (id: string) => http.get<User>(`/users/${id}`),
+  getById: (id: string) => http.get<User>(`/api/v1/users/${id}`),
 
   /**
-   * Get list of users
+   * Get list of users (paginated)
    */
-  list: () => http.get<User[]>('/users'),
-
-  /**
-   * Login user
-   */
-  login: (credentials: LoginCredentials) =>
-    http.post<LoginResponse>('/auth/login', credentials),
-
-  /**
-   * Logout user
-   */
-  logout: () => http.post('/auth/logout', {}),
-
-  /**
-   * Register new user
-   */
-  register: (data: {
-    email: string
-    password: string
-    name: string
-  }) => http.post<LoginResponse>('/auth/register', data),
-
-  /**
-   * Update user profile
-   */
-  update: (data: UpdateUserData) => http.put<User>('/user/profile', data),
-
-  /**
-   * Change password
-   */
-  changePassword: (data: { oldPassword: string; newPassword: string }) =>
-    http.post('/user/change-password', data, {}),
-
-  /**
-   * Upload avatar
-   */
-  uploadAvatar: (file: File) => {
-    const formData = new FormData()
-    formData.append('avatar', file)
-    return http.post<{ url: string }>('/user/avatar', formData, { baseUrl: '' })
-  },
+  list: () => http.get<User[]>('/api/v1/users'),
 } as const
-
-// Re-export query keys and queries
-export { userKeys } from './keys'
-export { userQueries } from './user.queries'

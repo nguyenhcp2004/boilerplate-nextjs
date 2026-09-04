@@ -49,20 +49,8 @@ const request = async <Response>(
   } else if (options?.body) {
     body = JSON.stringify(options.body)
   }
-  const baseHeaders: {
-    [key: string]: string
-  } =
-    body instanceof FormData
-      ? {}
-      : {
-          'Content-Type': 'application/json'
-        }
-  if (isClient()) {
-    const sessionToken = localStorage.getItem('sessionToken')
-    if (sessionToken) {
-      baseHeaders.Authorization = `Bearer ${sessionToken}`
-    }
-  }
+  const baseHeaders: { [key: string]: string } =
+    body instanceof FormData ? {} : { 'Content-Type': 'application/json' }
   // Nếu không truyền baseUrl (hoặc baseUrl = undefined) thì lấy từ envClientConfig.NEXT_PUBLIC_API_ENDPOINT
   // Nếu truyền baseUrl thì lấy giá trị truyền vào, truyền vào '' thì đồng nghĩa với việc chúng ta gọi API đến Next.js Server
 
@@ -70,8 +58,11 @@ const request = async <Response>(
 
   const fullUrl = url.startsWith('/') ? `${baseUrl}${url}` : `${baseUrl}/${url}`
 
+  // Auth is HttpOnly cookie-based (Better Auth on the NestJS backend);
+  // no token handling here — cookies flow automatically with credentials.
   const res = await fetch(fullUrl, {
     ...options,
+    credentials: 'include',
     headers: {
       ...baseHeaders,
       ...options?.headers

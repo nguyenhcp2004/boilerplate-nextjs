@@ -17,7 +17,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Feature-Sliced Design (FSD)** layers in `src/`: `app` → `screens` → `features` → `entities` → `shared`
 - **next-intl v4** for internationalization with `[locale]` routing (`vi` default, `en`)
 - **shadcn/ui** (New York style) primitives in `src/shared/ui/`
-- **TanStack Query v5** (queryOptions pattern) + **Zustand** (persisted auth store)
+- **TanStack Query v5** (queryOptions pattern); **Better Auth** cookie sessions (no client-side auth store)
 - **react-hook-form + Zod** for form validation
 - **Tailwind CSS v4** for styling; **sonner** for toasts; **next-themes** for theming
 
@@ -50,24 +50,32 @@ Adding translations for a new feature:
 1. Create `{vi,en}.json` under `src/features/<name>/i18n/`
 2. Register the segment in `src/shared/config/i18n/request.ts` (the config `src/i18n/request.ts` re-exports)
 
-Locale-prefixed routes (e.g. `/vi/login`, `/en/login`) are handled by the next-intl proxy in `src/proxy.ts`.
+Locale-prefixed routes (e.g. `/vi/login`, `/en/login`) are handled by the next-intl proxy in the root `proxy.ts` (also does the optimistic session check).
 
 ### HTTP Client
 
-`src/shared/lib/http/http.ts` provides a typed HTTP client with:
-- Automatic Bearer token injection from `localStorage.sessionToken`
+`src/shared/lib/http/http.ts` provides a typed HTTP client for application routes (`/api/v1/*` on the NestJS backend):
+- Cookie-based auth (`credentials: 'include'`) — no token handling
 - Support for JSON and FormData bodies
 - Custom error classes (`HttpError`, `EntityError` for 422)
 - Configurable `baseUrl` per request (defaults to `env.NEXT_PUBLIC_API_ENDPOINT`)
 
 Environment variables are validated at runtime via `@t3-oss/env-nextjs` in `src/shared/lib/env/env.ts`.
 
-### Auth Flow
+### Auth Flow (Better Auth)
 
-- Login: `features/auth/model/use-login.ts` → `entities/user/api` `userApi.login` → persists session (Zustand `auth-storage` + `localStorage.sessionToken`) → redirects to home
-- Session state: `entities/user/model/store.ts` (`useAuthStore`, persisted)
-- Guard hooks: `features/auth/model/use-auth.ts` (`useAuth().requireAuth`, `logout`, role helpers)
+Authentication lives on the NestJS backend (`boilerplate-nestjs`): Better Auth handler at `/api/auth/*`, HttpOnly cookie sessions (`better-auth.session_token`) in Redis. The frontend never touches the token.
+
+- Client: `entities/user/api/auth-client.ts` (`authClient` — createAuthClient from `better-auth/react`, additional fields `username`/`bio` hand-declared to mirror the backend config; update both sides when fields change)
+- Login: `features/auth/model/use-login.ts` — `authClient.signIn.email`; Better Auth error codes map to i18n keys, unknown codes fall back to `Auth.loginFailed`
+- Session state: `authClient.useSession()` (reactive nanostores) — no Zustand store
+- Guard hooks: `features/auth/model/use-auth.ts` (`useAuth().requireAuth`, `logout`)
+- Profile updates: `authClient.updateUser` / `authClient.changePassword` (`features/auth/api/`)
+- Route protection: root `proxy.ts` — `getSessionCookie` optimistic check (signed-in users are redirected away from login); real checks stay server-side per-route
+- Application user routes: `entities/user/api/index.ts` (`/api/v1/users/*`, cookie-authed)
 - Route constants: `src/shared/config/routes.ts` (`ROUTES` object)
+
+Env: `NEXT_PUBLIC_API_ENDPOINT` (backend origin), `BETTER_AUTH_SECRET` (must match the backend's; used only by the proxy for cookie verification).
 
 ### Git Workflow
 
